@@ -120,14 +120,16 @@ struct GiftModalView: View {
                     .rotationEffect(.degrees(giftShakeRotation))
                     .offset(x: giftShakeOffset)
                     .task {
-                        while !Task.isCancelled {
-                            try? await Task.sleep(for: .seconds(3))
+                        try? await Task.sleep(for: .seconds(1))
 
+                        while !Task.isCancelled {
                             guard !Task.isCancelled else {
                                 return
                             }
 
                             await shakeGiftImage()
+
+                            try? await Task.sleep(for: .seconds(3))
                         }
                     }
             }
