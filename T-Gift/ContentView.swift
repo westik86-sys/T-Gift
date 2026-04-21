@@ -93,17 +93,27 @@ struct GiftModalView: View {
                 Color(uiColor: .secondarySystemBackground)
                     .ignoresSafeArea()
 
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Ваш подарок")
+                VStack(alignment: .center, spacing: 8) {
+                    Text("Павел дарит вам подарок")
                         .font(.largeTitle.bold())
                         .foregroundStyle(.primary)
+                        .multilineTextAlignment(.center)
 
-                    Text("Мы подготовили для вас специальное предложение.")
+                    Text("Открывайте скорее!")
                         .font(.body)
                         .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                        .hidden()
                 }
+                .frame(maxWidth: .infinity)
                 .padding(.horizontal, 24)
                 .padding(.top, 32)
+
+                Image("GiftImage")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 300, height: 300)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
                 .safeAreaInset(edge: .bottom) {
                     Button {
