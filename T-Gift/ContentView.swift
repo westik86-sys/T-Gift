@@ -263,9 +263,9 @@ struct GiftModalView: View {
 
     @MainActor
     private func shakeGiftImage() async {
-        let haptic = UIImpactFeedbackGenerator(style: .light)
+        let haptic = UINotificationFeedbackGenerator()
         haptic.prepare()
-        haptic.impactOccurred(intensity: 0.75)
+        haptic.notificationOccurred(.success)
 
         await animateGiftShake(offset: 6, rotation: 2.5)
         await animateGiftShake(offset: -6, rotation: -2.5)
