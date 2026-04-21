@@ -112,10 +112,20 @@ struct GiftModalView: View {
                 .padding(.horizontal, 24)
                 .padding(.top, 32)
 
-                Image("GiftImage")
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 300, height: 300)
+                ZStack {
+                    Image("GiftImage")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 300, height: 300)
+                        .blur(radius: 22)
+                        .opacity(0.28)
+                        .scaleEffect(1.08)
+
+                    Image("GiftImage")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 300, height: 300)
+                }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .rotationEffect(.degrees(giftShakeRotation))
                     .offset(x: giftShakeOffset)
