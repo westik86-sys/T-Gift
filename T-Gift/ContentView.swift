@@ -96,6 +96,9 @@ struct GiftModalView: View {
     @State private var shockwaveScale = 0.05
     @State private var shockwaveOpacity = 0.0
     @State private var shockwaveLineWidth: CGFloat = 12
+    @State private var softShockwaveScale = 0.08
+    @State private var softShockwaveOpacity = 0.0
+    @State private var softShockwaveLineWidth: CGFloat = 24
     @State private var isOpeningGift = false
     @State private var hasOpenedGift = false
 
@@ -122,7 +125,54 @@ struct GiftModalView: View {
                 .padding(.top, 32)
                 .opacity(contentOpacity)
 
+                if hasOpenedGift {
+                    VStack(spacing: 40) {
+                        Image("GiftCard")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(maxWidth: .infinity)
+                            .padding(.horizontal, 16)
+
+                        VStack(spacing: 16) {
+                            Circle()
+                                .fill(Color.white)
+                                .frame(width: 80, height: 80)
+
+                            VStack(spacing: 16) {
+                                Text("Паша дарит \nкэшбэк на Дом и ремонт")
+                                    .font(.system(size: 20, weight: .bold, design: .default))
+                                    .kerning(0.38)
+                                    .multilineTextAlignment(.center)
+                                    .foregroundStyle(.primary)
+                                    .frame(width: 343, alignment: .top)
+
+                                Text("С днем рождения!!!")
+                                    .font(.body)
+                                    .multilineTextAlignment(.center)
+                                    .foregroundStyle(.primary)
+                                    .padding(.horizontal, 16)
+                                    .padding(.vertical, 12)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 20, style: .continuous)
+                                            .fill(Color(uiColor: .tertiarySystemBackground))
+                                    )
+                                    .frame(width: 343, alignment: .center)
+                            }
+                        }
+                    }
+                    .padding(.top, 24)
+                    .transition(.opacity)
+                }
+
                 ZStack {
+                    Circle()
+                        .stroke(shockwaveColor.opacity(softShockwaveOpacity), lineWidth: softShockwaveLineWidth)
+                        .frame(width: 150, height: 150)
+                        .scaleEffect(softShockwaveScale)
+                        .blur(radius: 22)
+                        .blendMode(.screen)
+                        .allowsHitTesting(false)
+
                     Circle()
                         .stroke(shockwaveColor.opacity(shockwaveOpacity), lineWidth: shockwaveLineWidth)
                         .frame(width: 120, height: 120)
@@ -154,6 +204,13 @@ struct GiftModalView: View {
                         .scaleEffect(giftScale)
                         .rotationEffect(.degrees(giftShakeRotation))
                         .offset(x: giftShakeOffset)
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            Task {
+                                await startGiftOpening()
+                            }
+                        }
+                        .allowsHitTesting(!isOpeningGift)
                     }
                 }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -247,6 +304,9 @@ struct GiftModalView: View {
         shockwaveScale = 0.05
         shockwaveOpacity = 0.95
         shockwaveLineWidth = 1
+        softShockwaveScale = 0.08
+        softShockwaveOpacity = 0
+        softShockwaveLineWidth = 24
         haptic.notificationOccurred(.success)
 
         withAnimation(.easeOut(duration: explosionDuration)) {
@@ -257,8 +317,19 @@ struct GiftModalView: View {
             shockwaveLineWidth = 90
         }
 
+        try? await Task.sleep(for: .seconds(0.06))
+        softShockwaveOpacity = 0.42
+
+        withAnimation(.easeOut(duration: explosionDuration * 1.15)) {
+            softShockwaveScale = 6.4
+            softShockwaveOpacity = 0
+            softShockwaveLineWidth = 130
+        }
+
         await shakeGiftImageStrongly(duration: explosionDuration)
-        hasOpenedGift = true
+        withAnimation(.easeInOut(duration: 0.25)) {
+            hasOpenedGift = true
+        }
     }
 
     @MainActor
