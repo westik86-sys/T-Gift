@@ -9,6 +9,7 @@ import SwiftUI
 
 struct ContentView: View {
     @State private var isShineVisible = false
+    @State private var isGiftPresented = false
 
     var body: some View {
         ZStack {
@@ -16,6 +17,7 @@ struct ContentView: View {
                 .ignoresSafeArea()
 
             Button {
+                isGiftPresented = true
             } label: {
                 Label("Получить подарок", systemImage: "gift.fill")
                     .font(.headline)
@@ -71,6 +73,60 @@ struct ContentView: View {
                     }
                 }
             }
+        }
+        .preferredColorScheme(.dark)
+        .sheet(isPresented: $isGiftPresented) {
+            GiftModalView()
+                .presentationDetents([.large])
+                .presentationDragIndicator(.hidden)
+                .presentationBackground(Color(uiColor: .secondarySystemBackground))
+        }
+    }
+}
+
+struct GiftModalView: View {
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            ZStack(alignment: .topLeading) {
+                Color(uiColor: .secondarySystemBackground)
+                    .ignoresSafeArea()
+
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Ваш подарок")
+                        .font(.largeTitle.bold())
+                        .foregroundStyle(.primary)
+
+                    Text("Мы подготовили для вас специальное предложение.")
+                        .font(.body)
+                        .foregroundStyle(.secondary)
+                }
+                .padding(.horizontal, 24)
+                .padding(.top, 32)
+            }
+                .safeAreaInset(edge: .bottom) {
+                    Button {
+                    } label: {
+                        Text("Забрать подарок")
+                            .font(.headline)
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.glassProminent)
+                    .controlSize(.large)
+                    .padding(.horizontal, 24)
+                    .padding(.bottom, 12)
+                }
+                .toolbar {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button {
+                            dismiss()
+                        } label: {
+                            Image(systemName: "xmark")
+                        }
+                    }
+                }
+                .toolbarColorScheme(.dark, for: .navigationBar)
         }
         .preferredColorScheme(.dark)
     }
