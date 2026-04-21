@@ -89,6 +89,9 @@ struct GiftModalView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var giftShakeOffset: CGFloat = 0
     @State private var giftShakeRotation = 0.0
+    @State private var giftScale = 1.0
+    @State private var contentOpacity = 1.0
+    @State private var isOpeningGift = false
 
     var body: some View {
         NavigationStack {
@@ -111,6 +114,7 @@ struct GiftModalView: View {
                 .frame(maxWidth: .infinity)
                 .padding(.horizontal, 24)
                 .padding(.top, 32)
+                .opacity(contentOpacity)
 
                 ZStack {
                     Image("GiftImage")
@@ -131,6 +135,7 @@ struct GiftModalView: View {
                         .allowsHitTesting(false)
                 }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .scaleEffect(giftScale)
                     .rotationEffect(.degrees(giftShakeRotation))
                     .offset(x: giftShakeOffset)
                     .task {
@@ -141,7 +146,9 @@ struct GiftModalView: View {
                                 return
                             }
 
-                            await shakeGiftImage()
+                            if !isOpeningGift {
+                                await shakeGiftImage()
+                            }
 
                             try? await Task.sleep(for: .seconds(3))
                         }
@@ -149,13 +156,18 @@ struct GiftModalView: View {
             }
                 .safeAreaInset(edge: .bottom) {
                     Button {
+                        Task {
+                            await startGiftOpening()
+                        }
                     } label: {
-                        Text("Забрать подарок")
+                        Text("Открыть")
                             .font(.headline)
                             .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.glassProminent)
                     .controlSize(.large)
+                    .opacity(contentOpacity)
+                    .allowsHitTesting(!isOpeningGift)
                     .padding(.horizontal, 24)
                     .padding(.bottom, 12)
                 }
@@ -187,13 +199,73 @@ struct GiftModalView: View {
     }
 
     @MainActor
-    private func animateGiftShake(offset: CGFloat, rotation: Double) async {
-        withAnimation(.easeInOut(duration: 0.07)) {
+    private func startGiftOpening() async {
+        guard !isOpeningGift else {
+            return
+        }
+
+        isOpeningGift = true
+        let shrinkDuration = 0.9
+
+        withAnimation(.easeInOut(duration: 0.35)) {
+            contentOpacity = 0
+        }
+
+        withAnimation(.easeInOut(duration: shrinkDuration)) {
+            giftScale = 0.42
+        }
+
+        await shakeGiftImageStrongly(duration: shrinkDuration)
+    }
+
+    @MainActor
+    private func shakeGiftImageStrongly(duration: TimeInterval) async {
+        let haptic = UIImpactFeedbackGenerator(style: .heavy)
+        haptic.prepare()
+        let endDate = Date().addingTimeInterval(duration)
+
+        let frames: [(offset: CGFloat, rotation: Double)] = [
+            (16, 7),
+            (-16, -7),
+            (14, 6),
+            (-14, -6),
+            (12, 5),
+            (-12, -5),
+            (9, 4),
+            (-9, -4),
+            (0, 0)
+        ]
+
+        while Date() < endDate {
+            for (index, frame) in frames.enumerated() {
+                guard Date() < endDate else {
+                    break
+                }
+
+                if index.isMultiple(of: 2) {
+                    haptic.impactOccurred(intensity: 0.9)
+                    haptic.prepare()
+                }
+
+                await animateGiftShake(
+                    offset: frame.offset,
+                    rotation: frame.rotation,
+                    duration: 0.045
+                )
+            }
+        }
+
+        await animateGiftShake(offset: 0, rotation: 0, duration: 0.045)
+    }
+
+    @MainActor
+    private func animateGiftShake(offset: CGFloat, rotation: Double, duration: Double = 0.07) async {
+        withAnimation(.easeInOut(duration: duration)) {
             giftShakeOffset = offset
             giftShakeRotation = rotation
         }
 
-        try? await Task.sleep(for: .milliseconds(70))
+        try? await Task.sleep(for: .seconds(duration))
     }
 }
 
