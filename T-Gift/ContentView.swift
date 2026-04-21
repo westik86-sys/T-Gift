@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import UIKit
 
 struct ContentView: View {
     @State private var isShineVisible = false
@@ -86,6 +87,8 @@ struct ContentView: View {
 
 struct GiftModalView: View {
     @Environment(\.dismiss) private var dismiss
+    @State private var giftShakeOffset: CGFloat = 0
+    @State private var giftShakeRotation = 0.0
 
     var body: some View {
         NavigationStack {
@@ -114,6 +117,19 @@ struct GiftModalView: View {
                     .scaledToFit()
                     .frame(width: 300, height: 300)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .rotationEffect(.degrees(giftShakeRotation))
+                    .offset(x: giftShakeOffset)
+                    .task {
+                        while !Task.isCancelled {
+                            try? await Task.sleep(for: .seconds(3))
+
+                            guard !Task.isCancelled else {
+                                return
+                            }
+
+                            await shakeGiftImage()
+                        }
+                    }
             }
                 .safeAreaInset(edge: .bottom) {
                     Button {
@@ -139,6 +155,29 @@ struct GiftModalView: View {
                 .toolbarColorScheme(.dark, for: .navigationBar)
         }
         .preferredColorScheme(.dark)
+    }
+
+    @MainActor
+    private func shakeGiftImage() async {
+        let haptic = UIImpactFeedbackGenerator(style: .light)
+        haptic.prepare()
+        haptic.impactOccurred(intensity: 0.75)
+
+        await animateGiftShake(offset: 6, rotation: 2.5)
+        await animateGiftShake(offset: -6, rotation: -2.5)
+        await animateGiftShake(offset: 4, rotation: 1.6)
+        await animateGiftShake(offset: -4, rotation: -1.6)
+        await animateGiftShake(offset: 0, rotation: 0)
+    }
+
+    @MainActor
+    private func animateGiftShake(offset: CGFloat, rotation: Double) async {
+        withAnimation(.easeInOut(duration: 0.07)) {
+            giftShakeOffset = offset
+            giftShakeRotation = rotation
+        }
+
+        try? await Task.sleep(for: .milliseconds(70))
     }
 }
 
