@@ -87,11 +87,17 @@ struct ContentView: View {
 
 struct GiftModalView: View {
     @Environment(\.dismiss) private var dismiss
+    private let shockwaveColor = Color(red: 248.0 / 255.0, green: 116.0 / 255.0, blue: 133.0 / 255.0)
     @State private var giftShakeOffset: CGFloat = 0
     @State private var giftShakeRotation = 0.0
     @State private var giftScale = 1.0
+    @State private var giftOpacity = 1.0
     @State private var contentOpacity = 1.0
+    @State private var shockwaveScale = 0.05
+    @State private var shockwaveOpacity = 0.0
+    @State private var shockwaveLineWidth: CGFloat = 12
     @State private var isOpeningGift = false
+    @State private var hasOpenedGift = false
 
     var body: some View {
         NavigationStack {
@@ -117,27 +123,40 @@ struct GiftModalView: View {
                 .opacity(contentOpacity)
 
                 ZStack {
-                    Image("GiftImage")
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: 300, height: 300)
-                        .blur(radius: 32)
-                        .opacity(0.28)
-                        .scaleEffect(1.2)
-
-                    Image("GiftImage")
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: 300, height: 300)
-
-                    SparkleOverlay()
-                        .frame(width: 300, height: 300)
+                    Circle()
+                        .stroke(shockwaveColor.opacity(shockwaveOpacity), lineWidth: shockwaveLineWidth)
+                        .frame(width: 120, height: 120)
+                        .scaleEffect(shockwaveScale)
+                        .blur(radius: 10)
+                        .blendMode(.screen)
                         .allowsHitTesting(false)
+
+                    if !hasOpenedGift {
+                        ZStack {
+                            Image("GiftImage")
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: 300, height: 300)
+                                .blur(radius: 32)
+                                .opacity(0.28)
+                                .scaleEffect(1.2)
+
+                            Image("GiftImage")
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: 300, height: 300)
+
+                            SparkleOverlay()
+                                .frame(width: 300, height: 300)
+                                .allowsHitTesting(false)
+                        }
+                        .opacity(giftOpacity)
+                        .scaleEffect(giftScale)
+                        .rotationEffect(.degrees(giftShakeRotation))
+                        .offset(x: giftShakeOffset)
+                    }
                 }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .scaleEffect(giftScale)
-                    .rotationEffect(.degrees(giftShakeRotation))
-                    .offset(x: giftShakeOffset)
                     .task {
                         try? await Task.sleep(for: .seconds(1))
 
@@ -215,11 +234,35 @@ struct GiftModalView: View {
             giftScale = 0.42
         }
 
-        await shakeGiftImageStrongly(duration: shrinkDuration)
+        await shakeGiftImageStrongly(duration: shrinkDuration, resetAtEnd: false)
+        await explodeGift()
     }
 
     @MainActor
-    private func shakeGiftImageStrongly(duration: TimeInterval) async {
+    private func explodeGift() async {
+        let haptic = UINotificationFeedbackGenerator()
+        haptic.prepare()
+        let explosionDuration = 0.58
+
+        shockwaveScale = 0.05
+        shockwaveOpacity = 0.95
+        shockwaveLineWidth = 1
+        haptic.notificationOccurred(.success)
+
+        withAnimation(.easeOut(duration: explosionDuration)) {
+            giftScale = 2.1
+            giftOpacity = 0
+            shockwaveScale = 7.2
+            shockwaveOpacity = 0
+            shockwaveLineWidth = 90
+        }
+
+        await shakeGiftImageStrongly(duration: explosionDuration)
+        hasOpenedGift = true
+    }
+
+    @MainActor
+    private func shakeGiftImageStrongly(duration: TimeInterval, resetAtEnd: Bool = true) async {
         let haptic = UIImpactFeedbackGenerator(style: .heavy)
         haptic.prepare()
         let endDate = Date().addingTimeInterval(duration)
@@ -255,7 +298,9 @@ struct GiftModalView: View {
             }
         }
 
-        await animateGiftShake(offset: 0, rotation: 0, duration: 0.045)
+        if resetAtEnd {
+            await animateGiftShake(offset: 0, rotation: 0, duration: 0.045)
+        }
     }
 
     @MainActor
