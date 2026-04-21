@@ -117,14 +117,18 @@ struct GiftModalView: View {
                         .resizable()
                         .scaledToFit()
                         .frame(width: 300, height: 300)
-                        .blur(radius: 22)
+                        .blur(radius: 32)
                         .opacity(0.28)
-                        .scaleEffect(1.08)
+                        .scaleEffect(1.2)
 
                     Image("GiftImage")
                         .resizable()
                         .scaledToFit()
                         .frame(width: 300, height: 300)
+
+                    SparkleOverlay()
+                        .frame(width: 300, height: 300)
+                        .allowsHitTesting(false)
                 }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .rotationEffect(.degrees(giftShakeRotation))
@@ -190,6 +194,119 @@ struct GiftModalView: View {
         }
 
         try? await Task.sleep(for: .milliseconds(70))
+    }
+}
+
+struct SparkleOverlay: View {
+    private let particles = SparkleParticle.baseSet()
+    private let sparkleDuration = 2.4
+
+    var body: some View {
+        TimelineView(.animation) { timeline in
+            let time = timeline.date.timeIntervalSinceReferenceDate
+
+            Canvas { context, size in
+                context.addFilter(.blur(radius: 1))
+
+                for particle in particles {
+                    let phase = sparklePhase(time: time, delay: particle.delay)
+                    let cycle = sparkleCycle(time: time, delay: particle.delay)
+                    let opacity = sin(phase * .pi)
+
+                    guard opacity > 0 else {
+                        continue
+                    }
+
+                    let particleSize = particleSize(for: particle, cycle: cycle)
+                    let center = CGPoint(
+                        x: size.width * particleX(for: particle, cycle: cycle),
+                        y: size.height * particleY(for: particle, cycle: cycle)
+                    )
+                    let length = particleSize * (0.8 + opacity * 1.4)
+                    let diagonalLength = length * 0.45
+                    let lineWidth = max(0.8, particleSize * 0.12)
+
+                    var path = Path()
+                    path.move(to: CGPoint(x: center.x - length, y: center.y))
+                    path.addLine(to: CGPoint(x: center.x + length, y: center.y))
+                    path.move(to: CGPoint(x: center.x, y: center.y - length))
+                    path.addLine(to: CGPoint(x: center.x, y: center.y + length))
+                    path.move(to: CGPoint(x: center.x - diagonalLength, y: center.y - diagonalLength))
+                    path.addLine(to: CGPoint(x: center.x + diagonalLength, y: center.y + diagonalLength))
+                    path.move(to: CGPoint(x: center.x - diagonalLength, y: center.y + diagonalLength))
+                    path.addLine(to: CGPoint(x: center.x + diagonalLength, y: center.y - diagonalLength))
+
+                    context.stroke(
+                        path,
+                        with: .color(.white.opacity(0.75 * opacity)),
+                        style: StrokeStyle(lineWidth: lineWidth, lineCap: .round)
+                    )
+
+                    let glowRect = CGRect(
+                        x: center.x - length,
+                        y: center.y - length,
+                        width: length * 2,
+                        height: length * 2
+                    )
+
+                    context.fill(
+                        Path(ellipseIn: glowRect),
+                        with: .color(.white.opacity(0.12 * opacity))
+                    )
+
+                    let coreRect = CGRect(
+                        x: center.x - particleSize * 0.22,
+                        y: center.y - particleSize * 0.22,
+                        width: particleSize * 0.44,
+                        height: particleSize * 0.44
+                    )
+
+                    context.fill(
+                        Path(ellipseIn: coreRect),
+                        with: .color(.white.opacity(0.9 * opacity))
+                    )
+                }
+            }
+        }
+    }
+
+    private func sparklePhase(time: TimeInterval, delay: Double) -> Double {
+        ((time + delay).truncatingRemainder(dividingBy: sparkleDuration)) / sparkleDuration
+    }
+
+    private func sparkleCycle(time: TimeInterval, delay: Double) -> Int {
+        Int(floor((time + delay) / sparkleDuration))
+    }
+
+    private func particleX(for particle: SparkleParticle, cycle: Int) -> Double {
+        0.14 + seededUnit(seed: particle.seed, cycle: cycle, salt: 11) * 0.72
+    }
+
+    private func particleY(for particle: SparkleParticle, cycle: Int) -> Double {
+        0.16 + seededUnit(seed: particle.seed, cycle: cycle, salt: 29) * 0.68
+    }
+
+    private func particleSize(for particle: SparkleParticle, cycle: Int) -> CGFloat {
+        3 + CGFloat(seededUnit(seed: particle.seed, cycle: cycle, salt: 47)) * 3
+    }
+
+    private func seededUnit(seed: Int, cycle: Int, salt: Int) -> Double {
+        let value = sin(Double(seed * 12_989 + cycle * 78_233 + salt * 37_719)) * 43_758.5453
+        return value - floor(value)
+    }
+}
+
+struct SparkleParticle {
+    let seed: Int
+    let delay: Double
+
+    static func baseSet(count: Int = 8) -> [SparkleParticle] {
+        (0..<count).map { index in
+            SparkleParticle(
+                seed: index + 1,
+                delay: Double(index) * 0.27
+            )
+        }
     }
 }
 
